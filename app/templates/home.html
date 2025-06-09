@@ -1,0 +1,247 @@
+{% extends 'index.html' %} {% load static %}{% block css %}
+<link rel="stylesheet" href="{% static 'css/home.css' %}" /> {% endblock css%}
+{% block content %}
+<div class="container mt-5">
+        <div class="mb-4">
+        <div class="d-flex justify-content-between align-items-center flex-column flex-md-row">
+            <h2 class="text-white mb-3 mb-md-0">Mis Tareas</h2>
+
+            <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center gap-2">
+            {% if user.is_authenticated %}
+            <button
+                class="btn btn-outline-light"
+                data-bs-toggle="modal"
+                data-bs-target="#crearTareaModal"
+            >
+                <i class="bi bi-plus-circle"></i> Crear Tarea
+            </button>
+            {% endif %}
+
+            <form method="get" class="d-flex flex-column flex-md-row align-items-start align-items-md-center gap-2 m-0">
+                <label for="estadoFiltro" class="me-0 me-md-2 text-white mb-1 mb-md-0">Filtrar por estado:</label>
+                <select name="estado" id="estadoFiltro" class="form-select me-0 me-md-2" onchange="this.form.submit()">
+                <option value="">Todos</option>
+                {% for estado in estados %}
+                <option value="{{ estado.id }}" {% if estado.id|stringformat:"s" == estado_seleccionado %}selected{% endif %}>
+                    {{ estado.nombre }}
+                </option>
+                {% endfor %}
+                </select>
+                {% if estado_seleccionado %}
+                <a href="{% url 'home' %}" class="btn btn-outline-light btn-sm">Quitar filtro</a>
+                {% endif %}
+            </form>
+            </div>
+        </div>
+        </div>
+    <!-- Modal para crear tarea -->
+    <div
+        class="modal fade"
+        id="crearTareaModal"
+        tabindex="-1"
+        aria-labelledby="crearTareaModalLabel"
+        aria-hidden="true"
+    >
+        <div class="modal-dialog">
+        <div class="modal-content bg-dark text-white">
+            <div class="modal-header">
+            <h5 class="modal-title" id="crearTareaModalLabel">Nueva Tarea</h5>
+            <button
+                type="button"
+                class="btn-close btn-close-white"
+                data-bs-dismiss="modal"
+                aria-label="Cerrar"
+            ></button>
+            </div>
+            <div class="modal-body">
+            <form method="POST" action="{% url 'crear_tarea' %}">
+                {% csrf_token %}
+                <div class="mb-3">
+                <label for="titulo" class="form-label">Título</label>
+                <input
+                    type="text"
+                    class="form-control"
+                    id="titulo"
+                    name="titulo"
+                    required
+                />
+                </div>
+                <div class="mb-3">
+                <label for="descripcion" class="form-label">Descripción</label>
+                <textarea
+                    class="form-control"
+                    id="descripcion"
+                    rows="3"
+                    name="descripcion"
+                ></textarea>
+                </div>
+                <div class="mb-3">
+                <label for="fecha" class="form-label">Fecha de vencimiento</label>
+                <input
+                    type="date"
+                    class="form-control"
+                    id="fecha"
+                    name="vencimiento"
+                    required
+                />
+                </div>
+                <button type="submit" class="btn btn-success">Guardar</button>
+            </form>
+            </div>
+        </div>
+        </div>
+    </div>
+    {% if tareas %}
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        <!--Tarjeta Tarea-->
+        {% for tarea in tareas %}
+        <div class="col">
+        <div class="card h-100 shadow border-0 text-white">
+            <div class="card-body">
+            <h5 class="card-title">{{ tarea.titulo }}</h5>
+            <p class="card-text">{{ tarea.descripcion }}</p>
+            <p><strong>Vencimiento:</strong> {{ tarea.vencimiento|date:'d-m-y' }}</p>
+            <span class="badge {{ tarea.estado.get_badge_class }}"
+                >{{ tarea.estado.nombre }}</span
+            >
+            </div>
+            <div
+            class="card-footer bg-transparent border-0 d-flex justify-content-between"
+            >
+            <button
+                type="button"
+                class="btn btn-sm btn-outline-light"
+                data-bs-toggle="modal"
+                data-bs-target="#editarTareaModal{{ tarea.id }}"
+            >
+                Editar
+            </button>
+            {% if tarea.estado.nombre != 'Completada' %}
+            <form
+                action="{% url 'iniciar_tarea' tarea.id %}"
+                method="post"
+                style="display: inline"
+            >
+                {% csrf_token %} {% if tarea.estado.nombre != 'En proceso' %}
+                <button type="submit" class="btn btn-sm btn-outline-success">
+                <i class="bi bi-play-circle"></i> Iniciar tarea
+                </button>
+                {% endif %}
+            </form>
+            {% endif %} {% if tarea.estado.nombre != 'Completada' %}
+            <form
+                action="{% url 'completar_tarea' tarea.id %}"
+                method="post"
+                style="display: inline"
+            >
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-check-circle"></i> Marcar completada
+                </button>
+            </form>
+            {% endif %}
+            </div>
+        </div>
+        </div>
+        <!-- Modal para editar tarea-->
+        <div
+        class="modal fade"
+        id="editarTareaModal{{ tarea.id }}"
+        tabindex="-1"
+        aria-labelledby="editarTareaLabel{{ tarea.id }}"
+        aria-hidden="true"
+        >
+        <div class="modal-dialog">
+            <div class="modal-content bg-dark text-white">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editarTareaLabel{{ tarea.id }}">
+                Editar tarea
+                </h5>
+                <button
+                type="button"
+                class="btn-close btn-close-white"
+                data-bs-dismiss="modal"
+                aria-label="Cerrar"
+                ></button>
+            </div>
+            <form method="post" action="{% url 'actualizar_tarea' tarea.id %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                <div class="mb-3">
+                    <label for="titulo{{ tarea.id }}" class="form-label"
+                    >Título</label
+                    >
+                    <input
+                    type="text"
+                    name="titulo"
+                    id="titulo{{ tarea.id }}"
+                    class="form-control"
+                    value="{{ tarea.titulo }}"
+                    required
+                    />
+                </div>
+                <div class="mb-3">
+                    <label for="descripcion{{ tarea.id }}" class="form-label"
+                    >Descripción</label
+                    >
+                    <textarea
+                    name="descripcion"
+                    id="descripcion{{ tarea.id }}"
+                    rows="3"
+                    class="form-control"
+                    >
+                    {{ tarea.descripcion }}</textarea
+                    >
+                </div>
+                <div class="mb-3">
+                    <label for="vencimiento{{ tarea.id }}" class="form-label"
+                    >Vencimiento</label
+                    >
+                    <input
+                    type="date"
+                    name="vencimiento"
+                    id="vencimiento{{ tarea.id }}"
+                    class="form-control"
+                    value="{{ tarea.vencimiento|date:'Y-m-d' }}"
+                    />
+                </div>
+                    <div class="mb-3">
+                        <label for="estado{{ tarea.id }}" class="form-label">Estado</label>
+                        <select name="estado" id="estado{{ tarea.id }}" class="form-select">
+                        {% for estado in estados %}
+                        <option value="{{ estado.id }}" {% if estado == tarea.estado %}selected{% endif %}>{{ estado.nombre }}</option>
+                        {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                <button
+                    type="button"
+                    class="btn btn-secondary"
+                    data-bs-dismiss="modal"
+                >
+                    Cancelar
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    Guardar cambios
+                </button>
+                </div>
+            </form>
+            <hr>
+            <form method="POST" action="{% url 'eliminar_tarea' tarea.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">Eliminar tarea</button>
+                </form>
+            </div>
+        </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+        <div class="text-white alert-info text-center" role="alert">
+            No tienes tareas.
+    {% endif %}
+    </div>
+</div>
+
+{% endblock content%} {% block js %}{% endblock js%}
